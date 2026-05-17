@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime
 from database.database import Base
 import datetime
 
@@ -6,7 +6,6 @@ class Meal(Base):
     __tablename__ = "meals"
 
     id = Column(Integer, primary_key=True, index=True)
-    #user_id = Column(Integer, ForeignKey("users.id"))
     image_path = Column(String, index=True)
     food_name = Column(String, index=True)
     calories = Column(Float)

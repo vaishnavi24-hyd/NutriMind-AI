@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
 from database.database import Base
 import datetime
 
@@ -6,7 +6,6 @@ class FoodLabelScan(Base):
     __tablename__ = "food_label_scans"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
     image_path = Column(String, index=True)
     extracted_text = Column(String)
     ingredient_explanation = Column(String)

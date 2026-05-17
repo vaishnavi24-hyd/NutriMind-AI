@@ -417,6 +417,8 @@ def show_dashboard():
         meals_logged = len(df) if not df.empty else 0
         avg_health = int(df["health_score"].mean()) if not df.empty else 0
         
+    target_cal = "2000 kcal"
+    target_pro = "150g"
     
     # 4-column layout for top metrics
     cols = st.columns(4)
