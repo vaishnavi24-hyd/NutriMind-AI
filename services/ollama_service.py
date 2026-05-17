@@ -24,30 +24,43 @@ class OllamaService:
             Exception: If Ollama is unreachable or the model errors.
         """
         system_prompt = '''You are an expert AI Nutritionist. Analyze the meal in the image.
-You must accurately identify complex meals such as burgers, pizza, diverse Indian meals (e.g., curries, naan, biryani, dosa), rice dishes, salads, and beverages.
+You must accurately identify ALL visible food items separately (e.g., burger, fries, salad, drink).
 
 Return ONLY valid JSON. Do not include explanations, markdown, or extra text.
 You must use this exact JSON structure:
 {
-"food_items": ["burger", "fries", "coke"],
-"calories": 850,
-"protein": 32,
-"carbs": 65,
-"fat": 48,
-"health_score": 45,
-"confidence_score": 90,
-"summary": "High calorie processed fast food meal. High in saturated fats and sodium.",
-"recommendation": "Consider replacing fries with a side salad and soda with sparkling water."
+  "foods": [
+    {
+      "name": "Cheeseburger",
+      "portion": "1 burger",
+      "calories": 600,
+      "protein": 30,
+      "carbs": 40,
+      "fat": 35,
+      "confidence": 95
+    }
+  ],
+  "total_calories": 600,
+  "total_protein": 30,
+  "total_carbs": 40,
+  "total_fat": 35,
+  "health_score": 45,
+  "confidence_score": 90,
+  "summary": "High calorie processed fast food meal. High in saturated fats and sodium.",
+  "recommendation": "Consider replacing fries with a side salad and soda with sparkling water."
 }
 
 IMPORTANT RULES:
-- "calories", "protein", "carbs", "fat" must be estimated integer values.
-- Macro Consistency Rule: The sum of (fat * 9) + (carbs * 4) + (protein * 4) MUST roughly equal the "calories". Do NOT provide mathematically impossible macros.
-- "health_score" must be an integer from 0 to 100 representing how healthy the meal is.
-- "confidence_score" must be an integer from 0 to 100 representing your confidence in identifying the food and estimating its macros.
-- Provide realistic numeric values. DO NOT return 0 for calories or macros unless the item is genuinely zero-calorie (like water).
+- Identify EVERY distinct food item and add it to the "foods" array.
+- "portion" should describe the amount (e.g., "1 cup", "150g", "2 slices").
+- "calories", "protein", "carbs", "fat" (per food AND total) must be estimated integer values.
+- Macro Consistency Rule: The sum of (fat * 9) + (carbs * 4) + (protein * 4) MUST roughly equal "calories".
+- The "total_*" fields MUST be the sum of the respective fields from all items in the "foods" array.
+- "health_score" must be an integer from 0 to 100 representing how healthy the overall meal is.
+- "confidence_score" and "confidence" (per food) must be an integer from 0 to 100.
+- Provide realistic numeric values. DO NOT return 0 for calories or macros unless genuinely zero-calorie.
 - "summary" should be concise and strictly focused on nutritional impact.
-- "recommendation" MUST suggest a specific, healthier alternative or modification for the exact meal shown.'''
+- "recommendation" MUST suggest a specific, healthier alternative or modification.'''
         
         try:
             response = ollama.chat(

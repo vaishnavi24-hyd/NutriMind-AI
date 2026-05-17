@@ -61,47 +61,44 @@ class NutritionService:
                 except json.JSONDecodeError as e2:
                     debug_logs["errors"].append(f"Regex JSON parse failed: {str(e2)}. Attempting aggressive regex value extraction.")
             
-            # Aggressive fallback extraction using regex if JSON parsing partially fails
-            if not analysis:
-                debug_logs["errors"].append("Attempting aggressive regex key-value extraction.")
-                analysis = {}
+        # Aggressive fallback extraction using regex if JSON parsing partially fails
+        if not analysis:
+            debug_logs["errors"].append("Attempting aggressive regex key-value extraction.")
+            analysis = {}
+            
+            for key in ["total_calories", "total_protein", "total_carbs", "total_fat", "health_score", "confidence_score", "calories"]:
+                val_match = re.search(f'"{key}"\s*:\s*"?(\d+\.?\d*)"?', raw_text, re.IGNORECASE)
+                if val_match:
+                    analysis[key] = float(val_match.group(1))
+                    
+            summary_match = re.search(r'"summary"\s*:\s*"(.*?)"', raw_text, re.IGNORECASE)
+            if summary_match:
+                analysis["summary"] = summary_match.group(1)
                 
-                # Try food items
-                items_match = re.search(r'"food_items"\s*:\s*\[(.*?)\]', raw_text, re.DOTALL)
-                if items_match:
-                    items_str = items_match.group(1)
-                    items = [i.strip(' "\n') for i in items_str.split(',')]
-                    analysis["food_items"] = [i for i in items if i]
-                else:
-                    item_match = re.search(r'"food_items"\s*:\s*"(.*?)"', raw_text)
-                    if item_match:
-                        analysis["food_items"] = [item_match.group(1)]
+            rec_match = re.search(r'"recommendation"\s*:\s*"(.*?)"', raw_text, re.IGNORECASE)
+            if rec_match:
+                analysis["recommendation"] = rec_match.group(1)
                 
-                for key in ["calories", "protein", "carbs", "fat", "health_score", "confidence_score"]:
-                    val_match = re.search(f'"{key}"\s*:\s*"?(\d+\.?\d*)"?', raw_text, re.IGNORECASE)
-                    if val_match:
-                        analysis[key] = float(val_match.group(1))
-                        
-                summary_match = re.search(r'"summary"\s*:\s*"(.*?)"', raw_text, re.IGNORECASE)
-                if summary_match:
-                    analysis["summary"] = summary_match.group(1)
+            # Attempt to extract foods array or default it
+            foods_match = re.search(r'"foods"\s*:\s*(\[.*?\])', raw_text, re.DOTALL)
+            if foods_match:
+                try:
+                    analysis["foods"] = json.loads(foods_match.group(1))
+                except json.JSONDecodeError:
+                    analysis["foods"] = []
                     
-                rec_match = re.search(r'"recommendation"\s*:\s*"(.*?)"', raw_text, re.IGNORECASE)
-                if rec_match:
-                    analysis["recommendation"] = rec_match.group(1)
-                    
-                if not analysis.get("calories"):
-                    analysis = None
-                    
+            if not analysis.get("total_calories") and not analysis.get("calories"):
+                analysis = None
+                
         if not analysis:
             debug_logs["errors"].append("Total parsing failure. Using intelligent defaults.")
             # Intelligent fallback if the model completely hallucinated
             analysis = {
-                "food_items": ["Unrecognized Meal"],
-                "calories": 500.0,
-                "protein": 20.0,
-                "carbs": 50.0,
-                "fat": 15.0,
+                "foods": [{"name": "Unrecognized Meal", "portion": "1 serving", "calories": 500, "protein": 20, "carbs": 50, "fat": 15, "confidence": 0}],
+                "total_calories": 500.0,
+                "total_protein": 20.0,
+                "total_carbs": 50.0,
+                "total_fat": 15.0,
                 "health_score": 50,
                 "confidence_score": 0,
                 "summary": "The AI provided an invalid response format. Using estimated default values.",
@@ -111,11 +108,17 @@ class NutritionService:
         debug_logs["cleaned_json"] = analysis
             
         # 3. Validate and extract with safe type-casting
-        food_items = analysis.get("food_items", [])
-        if isinstance(food_items, list) and len(food_items) > 0:
+        foods = analysis.get("foods", [])
+        food_items = [f.get("name", "Unknown Food") for f in foods if isinstance(f, dict)]
+        if not food_items:
+            # Fallback for old schema
+            old_items = analysis.get("food_items", [])
+            food_items = old_items if isinstance(old_items, list) else [analysis.get("food_name", "Unknown Meal")]
+            
+        if len(food_items) > 0:
             food_name = ", ".join([str(item) for item in food_items])
         else:
-            food_name = str(analysis.get("food_name", "Unknown Meal")) # fallback for old schema
+            food_name = "Unknown Meal"
             
         def extract_number(val, default_val):
             if val is None or val == "":
@@ -128,10 +131,10 @@ class NutritionService:
                 return parsed if parsed != 0.0 else default_val
             return default_val
 
-        calories = extract_number(analysis.get("calories"), 500.0)
-        protein = extract_number(analysis.get("protein"), 20.0)
-        carbs = extract_number(analysis.get("carbs"), 50.0)
-        fats = extract_number(analysis.get("fat", analysis.get("fats")), 15.0)
+        calories = extract_number(analysis.get("total_calories", analysis.get("calories")), 500.0)
+        protein = extract_number(analysis.get("total_protein", analysis.get("protein")), 20.0)
+        carbs = extract_number(analysis.get("total_carbs", analysis.get("carbs")), 50.0)
+        fats = extract_number(analysis.get("total_fat", analysis.get("fat", analysis.get("fats"))), 15.0)
         health_score = int(extract_number(analysis.get("health_score"), 50.0))
         confidence_score = int(extract_number(analysis.get("confidence_score"), 50.0))
         
@@ -152,10 +155,9 @@ class NutritionService:
             "confidence_score": confidence_score
         }
             
-        summary = str(analysis.get("summary", analysis.get("nutrition_summary", "Unable to generate summary.")))
-        recommendation = str(analysis.get("recommendation", ""))
-        
-        full_summary = f"{summary}\n\n*Recommendation:* {recommendation}" if recommendation else summary
+        # We will save the entire structured analysis as JSON in nutrition_summary
+        # so the UI can parse it out and render individual food cards.
+        full_summary = json.dumps(analysis)
         
         upload_time = datetime.datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
         
