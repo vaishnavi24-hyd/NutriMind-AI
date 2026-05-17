@@ -47,7 +47,11 @@ You must use this exact JSON structure:
   "health_score": 45,
   "confidence_score": 90,
   "summary": "High calorie processed fast food meal. High in saturated fats and sodium.",
-  "recommendation": "Consider replacing fries with a side salad and soda with sparkling water."
+  "recommendations": [
+    {"category": "Health Warning", "severity": "High", "message": "Ultra-processed food detected. High in sodium and saturated fat."},
+    {"category": "Improvement Suggestion", "severity": "Medium", "message": "Consider baking instead of frying to reduce calories."},
+    {"category": "Healthy Alternative", "severity": "Low", "message": "Try swapping the soda for sparkling water with lemon."}
+  ]
 }
 
 IMPORTANT RULES:
@@ -60,7 +64,10 @@ IMPORTANT RULES:
 - "confidence_score" and "confidence" (per food) must be an integer from 0 to 100.
 - Provide realistic numeric values. DO NOT return 0 for calories or macros unless genuinely zero-calorie.
 - "summary" should be concise and strictly focused on nutritional impact.
-- "recommendation" MUST suggest a specific, healthier alternative or modification.'''
+- Generate 1-4 concise personalized recommendations in the "recommendations" array.
+- Valid "category" values: "Health Warning", "Improvement Suggestion", "Fitness Tip", "Healthy Alternative".
+- Valid "severity" values: "High", "Medium", "Low".
+- Provide warnings for excessive sugar, ultra-processed foods, high saturated fat, low protein, or excessive calories.'''
         
         try:
             response = ollama.chat(

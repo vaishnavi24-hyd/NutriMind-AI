@@ -49,15 +49,58 @@ def render_meal_analysis(meal):
         st.markdown("#### 💡 Health Summary")
         
         summary_text = analysis_data.get("summary", meal.nutrition_summary)
-        rec_text = analysis_data.get("recommendation", "")
         
         if "Excellent" in summary_text:
             st.info(summary_text)
         else:
             st.write(summary_text)
             
-        if rec_text:
-            st.markdown(f"**Recommendation:** {rec_text}")
+        recs = analysis_data.get("recommendations", [])
+        if recs:
+            st.markdown("#### 🎯 AI Recommendations")
+            for rec in recs:
+                category = rec.get("category", "Suggestion")
+                message = rec.get("message", "")
+                
+                if "Warning" in category:
+                    border_color = "#ff003c" # Neon Red
+                    bg_color = "rgba(255, 0, 60, 0.05)"
+                    icon = "⚠️"
+                elif "Improvement" in category:
+                    border_color = "#ffaa00" # Neon Orange
+                    bg_color = "rgba(255, 170, 0, 0.05)"
+                    icon = "⚡"
+                elif "Fitness" in category:
+                    border_color = "#b800ff" # Neon Purple
+                    bg_color = "rgba(184, 0, 255, 0.05)"
+                    icon = "💪"
+                else: # Healthy Alternative
+                    border_color = "#00ff88" # Neon Green
+                    bg_color = "rgba(0, 255, 136, 0.05)"
+                    icon = "🌱"
+                    
+                st.markdown(f"""
+                <div style="
+                    border-left: 4px solid {border_color};
+                    background-color: {bg_color};
+                    padding: 12px 16px;
+                    border-radius: 4px;
+                    margin-bottom: 12px;
+                    box-shadow: -4px 0px 15px {border_color}33;
+                ">
+                    <div style="font-weight: 600; color: {border_color}; margin-bottom: 4px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">
+                        {icon} {category}
+                    </div>
+                    <div style="color: #E2E8F0; font-size: 1.05em; line-height: 1.5;">
+                        {message}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            # Fallback for old records
+            rec_text = analysis_data.get("recommendation", "")
+            if rec_text:
+                st.markdown(f"**Recommendation:** {rec_text}")
             
         score_col1, score_col2 = st.columns(2)
         with score_col1:

@@ -75,9 +75,17 @@ class NutritionService:
             if summary_match:
                 analysis["summary"] = summary_match.group(1)
                 
-            rec_match = re.search(r'"recommendation"\s*:\s*"(.*?)"', raw_text, re.IGNORECASE)
-            if rec_match:
-                analysis["recommendation"] = rec_match.group(1)
+            # Attempt to extract recommendations array
+            recs_match = re.search(r'"recommendations"\s*:\s*(\[.*?\])', raw_text, re.DOTALL)
+            if recs_match:
+                try:
+                    analysis["recommendations"] = json.loads(recs_match.group(1))
+                except json.JSONDecodeError:
+                    analysis["recommendations"] = []
+            else:
+                rec_match = re.search(r'"recommendation"\s*:\s*"(.*?)"', raw_text, re.IGNORECASE)
+                if rec_match:
+                    analysis["recommendations"] = [{"category": "Improvement Suggestion", "severity": "Medium", "message": rec_match.group(1)}]
                 
             # Attempt to extract foods array or default it
             foods_match = re.search(r'"foods"\s*:\s*(\[.*?\])', raw_text, re.DOTALL)
@@ -102,7 +110,9 @@ class NutritionService:
                 "health_score": 50,
                 "confidence_score": 0,
                 "summary": "The AI provided an invalid response format. Using estimated default values.",
-                "recommendation": "Please try taking another picture with better lighting."
+                "recommendations": [
+                    {"category": "Health Warning", "severity": "Medium", "message": "Could not parse AI recommendation. Ensure lighting is good."}
+                ]
             }
             
         debug_logs["cleaned_json"] = analysis
