@@ -408,6 +408,8 @@ def show_dashboard():
     st.markdown("Welcome back! Here is your daily nutrition overview.")
     
     with get_db() as db:
+        user = ProfileService.get_user_profile(db)
+        metrics = ProfileService.calculate_metrics(user) if user else None
         
         today = datetime.date.today()
         df = AnalyticsService.get_analytics_dataframe(db, start_date=today, end_date=today)
@@ -417,6 +419,8 @@ def show_dashboard():
         meals_logged = len(df) if not df.empty else 0
         avg_health = int(df["health_score"].mean()) if not df.empty else 0
         
+    target_cal = f"{metrics['target_calories']} kcal" if metrics else "Set in Profile"
+    target_pro = f"{metrics['target_protein']}g" if metrics else "Set in Profile"
     
     # 4-column layout for top metrics
     cols = st.columns(4)
@@ -856,6 +860,7 @@ def main():
                 "Food Label Scanner",
                 "Analytics", 
                 "AI Nutrition Coach",
+                "Profile"
             ],
             label_visibility="collapsed"
         )
@@ -877,6 +882,8 @@ def main():
         show_food_label_scanner()
     elif page == "AI Nutrition Coach":
         show_ai_coach()
+    elif page == "Profile":
+        render_profile()
 
 
 if __name__ == "__main__":

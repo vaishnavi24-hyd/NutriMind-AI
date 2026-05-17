@@ -6,7 +6,7 @@ class Meal(Base):
     __tablename__ = "meals"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    #user_id = Column(Integer, ForeignKey("users.id"))
     image_path = Column(String, index=True)
     food_name = Column(String, index=True)
     calories = Column(Float)
