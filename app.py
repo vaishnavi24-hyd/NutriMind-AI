@@ -19,6 +19,7 @@ from utils.image_utils import save_uploaded_file, get_image_metadata
 from components.chat_ui import render_chat_interface
 from components.nutrition_cards import render_meal_analysis
 from components.label_scanner_ui import render_label_analysis
+from components.meal_comparison_ui import render_meal_comparison
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -855,6 +856,7 @@ def main():
                 "Dashboard", 
                 "Upload Meal", 
                 "Meal History", 
+                "Meal Comparison",
                 "Food Label Scanner",
                 "Analytics", 
                 "AI Nutrition Coach",
@@ -877,6 +879,8 @@ def main():
         show_analytics()
     elif page == "Food Label Scanner":
         show_food_label_scanner()
+    elif page == "Meal Comparison":
+        render_meal_comparison()
     elif page == "AI Nutrition Coach":
         show_ai_coach()
 

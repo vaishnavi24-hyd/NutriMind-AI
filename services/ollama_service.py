@@ -83,3 +83,40 @@ IMPORTANT RULES:
         except Exception as e:
             # Re-raise to be handled by the orchestrator (NutritionService)
             raise Exception(f"Ollama inference failed: {str(e)}")
+
+    @staticmethod
+    def compare_meals(meal_a_data: dict, meal_b_data: dict) -> str:
+        """
+        Sends the analyzed JSON data of two meals to the local llama3.2 model
+        to generate a comparative verdict.
+        """
+        import json
+        system_prompt = '''You are an expert AI Nutritionist. Compare the two provided meals.
+Return ONLY valid JSON. Do not include explanations or markdown.
+You must use this exact JSON structure:
+{
+  "healthier_meal": "Meal A", 
+  "better_for_weight_loss": "Meal A",
+  "better_for_muscle_gain": "Meal B",
+  "more_processed": "Meal B",
+  "verdict": "Meal A is significantly healthier due to lower saturated fats, while Meal B is better for muscle gain but highly processed.",
+  "recommendation": "Choose Meal A for daily consumption. Meal B should be eaten sparingly."
+}
+
+Ensure "healthier_meal", "better_for_weight_loss", "better_for_muscle_gain", and "more_processed" strictly return either "Meal A" or "Meal B" or "Tie".
+'''
+        
+        user_content = f"Meal A Data:\n{json.dumps(meal_a_data)}\n\nMeal B Data:\n{json.dumps(meal_b_data)}"
+        
+        try:
+            response = ollama.chat(
+                model='llama3.2-vision',
+                messages=[
+                    {'role': 'system', 'content': system_prompt},
+                    {'role': 'user', 'content': user_content}
+                ],
+                format='json'
+            )
+            return response['message']['content']
+        except Exception as e:
+            raise Exception(f"Ollama comparison failed: {str(e)}")
